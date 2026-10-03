@@ -314,6 +314,26 @@ body::before{
 }
 </style>
 
+
+<style>
+.gcal-switch-row{
+  display:flex;align-items:flex-start;gap:10px;margin-top:14px;padding:12px;
+  border:1px solid var(--border);border-radius:14px;background:var(--surface2)
+}
+.gcal-status{
+  display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;
+  border:1px solid var(--border);border-radius:14px;background:var(--surface)
+}
+.gcal-dot{width:10px;height:10px;border-radius:50%;background:#aaa;box-shadow:0 0 0 4px rgba(120,120,120,.12)}
+.gcal-status.connected .gcal-dot{background:#5f8d69;box-shadow:0 0 0 4px rgba(95,141,105,.14)}
+.gcal-status.syncing .gcal-dot{background:#c39553;box-shadow:0 0 0 4px rgba(195,149,83,.14)}
+.gcal-status.error .gcal-dot{background:#b25e5e;box-shadow:0 0 0 4px rgba(178,94,94,.14)}
+.gcal-linked-badge{
+  display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;
+  font-size:10px;font-weight:800;background:#e8f2e9;color:#52715a;margin-top:6px
+}
+</style>
+
 </head>
 <body>
 
@@ -488,10 +508,39 @@ body::before{
 
   <div class="grid2">
     <div class="card">
-      <h3 style="margin-top:0">Google Calendar</h3>
-      <div class="subtitle">Open Google Calendar with a Planora event already filled in. You can review it before saving.</div>
-      <div style="margin-top:12px">
-        <button class="btn primary" id="openGoogleCalendar">Open Google Calendar</button>
+      <h3 style="margin-top:0">Google Calendar — Two-Way Sync</h3>
+      <div class="subtitle">Planora events can be created and updated in Google Calendar. Changes to those linked Google events can sync back into Planora.</div>
+
+      <div class="form-grid" style="margin-top:12px">
+        <div class="full">
+          <label>Google OAuth Web Client ID</label>
+          <input id="googleCalendarClientId" placeholder="xxxxxxxxxxxx-xxxxxxxxxxxxxxxx.apps.googleusercontent.com">
+          <div class="subtitle" style="margin-top:5px">One-time app setup. Create a Web OAuth Client ID in Google Cloud Console and add your GitHub Pages domain as an Authorized JavaScript origin.</div>
+        </div>
+        <div class="full" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="saveGoogleCalendarSetup">Save Setup</button>
+          <button class="btn primary" id="connectGoogleCalendar">Connect Google Calendar</button>
+          <button class="btn" id="syncGoogleCalendar" disabled>Sync Now</button>
+          <button class="btn danger" id="disconnectGoogleCalendar" disabled>Disconnect</button>
+        </div>
+      </div>
+
+      <label class="gcal-switch-row">
+        <input type="checkbox" id="googleCalendarAutoSync" style="width:auto">
+        <span><b>Auto Sync</b><br><small>Sync linked Planora events every 5 minutes while this app is open and Google authorization is active.</small></span>
+      </label>
+
+      <div class="gcal-status" id="googleCalendarStatus">
+        <span class="gcal-dot"></span>
+        <div><b>Not connected</b><div class="subtitle">Save your Google OAuth Client ID, then connect your calendar.</div></div>
+      </div>
+
+      <div class="cloud-help" style="margin-top:10px">
+        Only events created/linked by Planora are synchronized. Planora will not import your unrelated personal Google Calendar events.
+      </div>
+
+      <div style="margin-top:10px">
+        <button class="btn" id="openGoogleCalendar">Open Google Calendar</button>
       </div>
     </div>
 
@@ -505,8 +554,8 @@ body::before{
   </div>
 
   <div class="cloud-help" style="margin-top:12px">
-    <b>Important:</b> this version supports one-way add/export from Planora to Google Calendar and Apple Calendar.
-    True automatic two-way synchronization requires Google Calendar OAuth/API permissions and a separate secure integration.
+    <b>Google:</b> two-way synchronization is available for Planora-linked events after Google OAuth authorization.
+    <b>Apple / iOS:</b> remains .ics export/import because a browser-based HTML app cannot directly maintain a background two-way connection to a user's private Apple Calendar.
   </div>
 </div>
 
@@ -597,8 +646,8 @@ const backgroundThemes={
 
 const palette=['#b98f84','#8ea891','#d7ad7f','#9f91bd','#74a5ad','#c9828f','#8f9fca','#b5a06f','#76a17c','#b07eaa'];
 const $=id=>document.getElementById(id);
-function defaults(){return{profile:{name:'Planora User',email:'demo@planora.app',plan:'free'},theme:'latte',backgroundTheme:'none',font:'Inter,system-ui,sans-serif',defaultFontColor:'#2f2925',planner:[],focus:{},mood:{},habits:[{name:'Water',checks:{}},{name:'Exercise',checks:{}},{name:'Read',checks:{}}],money:[],budgets:{daily:{},monthly:{},yearly:{}},categoryBudgets:{daily:{},monthly:{},yearly:{}},categories:{inflow:['Salary','Dividend','Small Business'],outflow:['Tax','Donation','Car Payments','Mortgage Payments'],allocation:['Emergency Fund','Retirement Fund','Education Fund'],accounts:['Cash','Maybank','CIMB','Credit Card','E-Wallet']},accountOpening:{Cash:0,Maybank:0,CIMB:0,'Credit Card':0,'E-Wallet':0},stickers:[],customBackgrounds:[]}}
-function merge(d){const b=defaults();d={...b,...d};d.profile={...b.profile,...(d.profile||{})};d.categories={...b.categories,...(d.categories||{})};d.budgets={...b.budgets,...(d.budgets||{})};d.categoryBudgets={...b.categoryBudgets,...(d.categoryBudgets||{})};d.accountOpening={...b.accountOpening,...(d.accountOpening||{})};d.planner=Array.isArray(d.planner)?d.planner:[];d.money=Array.isArray(d.money)?d.money:[];d.stickers=Array.isArray(d.stickers)?d.stickers:[];d.customBackgrounds=Array.isArray(d.customBackgrounds)?d.customBackgrounds:[];return d}
+function defaults(){return{profile:{name:'Planora User',email:'demo@planora.app',plan:'free'},theme:'latte',backgroundTheme:'none',font:'Inter,system-ui,sans-serif',defaultFontColor:'#2f2925',planner:[],focus:{},mood:{},habits:[{name:'Water',checks:{}},{name:'Exercise',checks:{}},{name:'Read',checks:{}}],money:[],budgets:{daily:{},monthly:{},yearly:{}},categoryBudgets:{daily:{},monthly:{},yearly:{}},categories:{inflow:['Salary','Dividend','Small Business'],outflow:['Tax','Donation','Car Payments','Mortgage Payments'],allocation:['Emergency Fund','Retirement Fund','Education Fund'],accounts:['Cash','Maybank','CIMB','Credit Card','E-Wallet']},accountOpening:{Cash:0,Maybank:0,CIMB:0,'Credit Card':0,'E-Wallet':0},stickers:[],customBackgrounds:[],googleCalendarDeleted:[]}}
+function merge(d){const b=defaults();d={...b,...d};d.profile={...b.profile,...(d.profile||{})};d.categories={...b.categories,...(d.categories||{})};d.budgets={...b.budgets,...(d.budgets||{})};d.categoryBudgets={...b.categoryBudgets,...(d.categoryBudgets||{})};d.accountOpening={...b.accountOpening,...(d.accountOpening||{})};d.planner=Array.isArray(d.planner)?d.planner:[];d.money=Array.isArray(d.money)?d.money:[];d.stickers=Array.isArray(d.stickers)?d.stickers:[];d.customBackgrounds=Array.isArray(d.customBackgrounds)?d.customBackgrounds:[];d.googleCalendarDeleted=Array.isArray(d.googleCalendarDeleted)?d.googleCalendarDeleted:[];return d}
 function load(){try{const n=JSON.parse(localStorage.getItem(KEY));if(n)return merge(n);const old=JSON.parse(localStorage.getItem('planora_life_planner_v1'));if(old)return merge(old)}catch(e){}return defaults()}
 let data=load(),cursor=new Date(),active='dashboard',budgetPeriod='daily',catType='inflow',editingPlannerId=null;cursor.setHours(12,0,0,0);
 window.planoraGetData=()=>data;
@@ -640,7 +689,7 @@ function renderStickerSelect(selected){const s=$('pSticker');s.innerHTML='';['�
 function syncPlannerType(){const t=$('pType').value,isSticker=t==='sticker',isPhoto=t==='photo',isText=!isSticker&&!isPhoto,isNoteQuote=t==='note'||t==='quote';$('pTextWrap').classList.toggle('hidden',!isText);$('pStickerWrap').classList.toggle('hidden',!isSticker);$('pPhotoWrap').classList.toggle('hidden',!isPhoto);$('pFontWrap').classList.toggle('hidden',isSticker||isPhoto);$('pFontColorWrap').classList.toggle('hidden',isSticker||isPhoto);$('pAccentWrap').classList.toggle('hidden',isSticker||isPhoto);$('pBgWrap').classList.toggle('hidden',!isNoteQuote)}$('pType').onchange=syncPlannerType;
 function openPlannerModal(item=null){editingPlannerId=item?.id||null;$('plannerModalTitle').textContent=item?'Edit Planner Item':'Add Planner Item';$('savePlanner').textContent=item?'Update Item':'Save Item';$('pDate').value=item?.date||iso(cursor);$('pTime').value=item?.time||'';$('pType').value=item?.type||'task';$('pText').value=item?.text||'';$('pColor').value=item?.color||'#d8b6ae';$('pBgColor').value=item?.bgColor||'#fff8f2';$('pFontColor').value=item?.fontColor||data.defaultFontColor;$('pFont').value=item?.font||'inherit';$('pPhoto').value='';$('photoHint').textContent=item?.type==='photo'&&item?.photo?'Current photo will remain unless you upload a replacement.':'';let selected='';if(item?.type==='sticker'){if(item.stickerRef)selected=item.stickerRef}renderStickerSelect(selected);syncPlannerType();openModal('plannerModal')}window.openPlannerModal=openPlannerModal;
 function emojiData(emoji){const c=document.createElement('canvas');c.width=c.height=180;const z=c.getContext('2d');z.font='120px serif';z.textAlign='center';z.textBaseline='middle';z.fillText(emoji,90,95);return c.toDataURL('image/png')}
-$('savePlanner').onclick=()=>{const t=$('pType').value,date=$('pDate').value||iso(cursor),existing=data.planner.find(x=>x.id===editingPlannerId);const finish=(media,mediaRef)=>{const obj={id:existing?.id||uid(),date,time:$('pTime').value||'',type:t,text:(t==='task'||t==='note'||t==='quote')?$('pText').value.trim():'',color:$('pColor').value,bgColor:$('pBgColor').value,fontColor:$('pFontColor').value,font:$('pFont').value,done:existing?.done||false};if(t==='sticker'){obj.sticker=media;obj.stickerRef=mediaRef}if(t==='photo')obj.photo=media;if((t==='task'||t==='note'||t==='quote')&&!obj.text)return alert('Please enter text.');if(existing)Object.assign(existing,obj);else data.planner.push(obj);save();$('plannerModal').classList.remove('show');editingPlannerId=null;render()};if(t==='photo'){const f=$('pPhoto').files[0];if(f){const r=new FileReader();r.onload=()=>finish(r.result,'');r.readAsDataURL(f)}else if(existing?.photo)finish(existing.photo,'');else alert('Please choose a photo.');return}if(t==='sticker'){const v=$('pSticker').value;if(v.startsWith('emoji:'))finish(emojiData(v.slice(6)),v);else{const st=data.stickers[Number(v.split(':')[1])];if(st)finish(st.src,v);else alert('Please choose a sticker.')}return}finish('','')};
+$('savePlanner').onclick=()=>{const t=$('pType').value,date=$('pDate').value||iso(cursor),existing=data.planner.find(x=>x.id===editingPlannerId);const finish=(media,mediaRef)=>{const obj={id:existing?.id||uid(),date,time:$('pTime').value||'',type:t,text:(t==='task'||t==='note'||t==='quote')?$('pText').value.trim():'',color:$('pColor').value,bgColor:$('pBgColor').value,fontColor:$('pFontColor').value,font:$('pFont').value,done:existing?.done||false,googleEventId:existing?.googleEventId||'',googleUpdated:existing?.googleUpdated||0,calendarSyncedAt:existing?.calendarSyncedAt||0,calendarSource:existing?.calendarSource||'planora',planoraModified:Date.now()};if(t==='sticker'){obj.sticker=media;obj.stickerRef=mediaRef}if(t==='photo')obj.photo=media;if((t==='task'||t==='note'||t==='quote')&&!obj.text)return alert('Please enter text.');if(existing)Object.assign(existing,obj);else data.planner.push(obj);save();$('plannerModal').classList.remove('show');editingPlannerId=null;render()};if(t==='photo'){const f=$('pPhoto').files[0];if(f){const r=new FileReader();r.onload=()=>finish(r.result,'');r.readAsDataURL(f)}else if(existing?.photo)finish(existing.photo,'');else alert('Please choose a photo.');return}if(t==='sticker'){const v=$('pSticker').value;if(v.startsWith('emoji:'))finish(emojiData(v.slice(6)),v);else{const st=data.stickers[Number(v.split(':')[1])];if(st)finish(st.src,v);else alert('Please choose a sticker.')}return}finish('','')};
 
 function pad2(n){return String(n).padStart(2,'0')}
 function planoraEventTimes(item){
@@ -743,15 +792,15 @@ function exportAllPlanoraICS(){
   downloadTextFile('planora-calendar.ics',lines.join('\r\n'),'text/calendar;charset=utf-8');
 }
 
-function plannerItem(i){const d=document.createElement('div');d.className='item '+i.type;d.style.setProperty('--itemColor',i.color||'#d8b6ae');d.style.setProperty('--itemBg',(i.type==='note'||i.type==='quote')?(i.bgColor||'#fff8f2'):'#fff');d.style.setProperty('--itemFont',i.fontColor||data.defaultFontColor);d.style.setProperty('--itemTypeface',i.font||'inherit');const acts=document.createElement('div');acts.className='item-actions';const edit=document.createElement('button');edit.textContent='Edit';edit.title='Edit item';edit.className='edit-item-btn';edit.onclick=(e)=>{e.stopPropagation();openPlannerModal(i)};const del=document.createElement('button');del.textContent='×';del.title='Delete';del.onclick=(e)=>{e.stopPropagation();if(confirm('Delete this planner item?')){data.planner=data.planner.filter(z=>z.id!==i.id);save();render()}};acts.append(edit,del);d.appendChild(acts);
+function plannerItem(i){const d=document.createElement('div');d.className='item '+i.type;d.style.setProperty('--itemColor',i.color||'#d8b6ae');d.style.setProperty('--itemBg',(i.type==='note'||i.type==='quote')?(i.bgColor||'#fff8f2'):'#fff');d.style.setProperty('--itemFont',i.fontColor||data.defaultFontColor);d.style.setProperty('--itemTypeface',i.font||'inherit');const acts=document.createElement('div');acts.className='item-actions';const edit=document.createElement('button');edit.textContent='Edit';edit.title='Edit item';edit.className='edit-item-btn';edit.onclick=(e)=>{e.stopPropagation();openPlannerModal(i)};const del=document.createElement('button');del.textContent='×';del.title='Delete';del.onclick=async(e)=>{e.stopPropagation();if(confirm('Delete this planner item?')){if(i.googleEventId){data.googleCalendarDeleted=data.googleCalendarDeleted||[];if(!data.googleCalendarDeleted.includes(i.googleEventId))data.googleCalendarDeleted.push(i.googleEventId);if(window.planoraGoogleDeleteEvent){try{await window.planoraGoogleDeleteEvent(i.googleEventId);data.googleCalendarDeleted=data.googleCalendarDeleted.filter(x=>x!==i.googleEventId)}catch(err){console.warn('Google Calendar deletion queued.',err)}}}data.planner=data.planner.filter(z=>z.id!==i.id);save();render()}};acts.append(edit,del);d.appendChild(acts);
 if(i.date){
   const cal=document.createElement('div');
   cal.className='calendar-actions';
   const g=document.createElement('button');
   g.className='google-cal-btn';
-  g.textContent='Google Calendar';
-  g.title='Add this Planora item to Google Calendar';
-  g.onclick=(e)=>{e.stopPropagation();openItemInGoogleCalendar(i)};
+  g.textContent=i.googleEventId?'Google ✓':'Google Calendar';
+  g.title=i.googleEventId?'Sync this linked event with Google Calendar':'Add or link this Planora item to Google Calendar';
+  g.onclick=async(e)=>{e.stopPropagation();if(planoraGcalToken&&Date.now()<planoraGcalTokenExpiresAt){try{if(i.googleEventId)await updateGoogleEventForItem(i,i.googleEventId);else await createGoogleEventForItem(i);save();render();setGcalStatus('Event synced ✓',plannerItemTitle(i)+' is linked to Google Calendar.','connected')}catch(err){setGcalStatus('Sync error',err.message,'error')}}else openItemInGoogleCalendar(i)};
   const a=document.createElement('button');
   a.className='apple-cal-btn';
   a.textContent='Apple / iOS';
@@ -769,6 +818,7 @@ if(i.time){
   tm.textContent='🕒 '+h12+':'+String(mm).padStart(2,'0')+' '+ap;
   d.appendChild(tm);
 }
+if(i.googleEventId){const gb=document.createElement('div');gb.className='gcal-linked-badge';gb.textContent='✓ Google Calendar linked';d.appendChild(gb);}
 d.ondblclick=(e)=>{if(e.target.closest('button,input'))return;openPlannerModal(i)};const body=document.createElement('div');body.className='item-body';if(i.type==='task'){const row=document.createElement('div');row.style.display='flex';row.style.gap='8px';const cb=document.createElement('input');cb.type='checkbox';cb.style.width='auto';cb.checked=!!i.done;const sp=document.createElement('span');sp.textContent=i.text;sp.style.textDecoration=i.done?'line-through':'none';cb.onchange=()=>{i.done=cb.checked;sp.style.textDecoration=i.done?'line-through':'none';save();renderDashboard()};row.append(cb,sp);body.appendChild(row)}else if(i.type==='sticker'){const img=document.createElement('img');img.className='sticker';img.src=i.sticker||'';body.appendChild(img)}else if(i.type==='photo'){const img=document.createElement('img');img.className='photo';img.src=i.photo||'';body.appendChild(img)}else body.textContent=i.text;d.appendChild(body);return d}
 function renderDaily(){
   $('dailyHeading').textContent=periodLabel('daily');
@@ -1002,6 +1052,313 @@ $('customBackgroundUpload').onchange=async e=>{
 };
 $('cancelBackgroundPreview').onclick=cancelBackgroundPreview;
 $('applyBackgroundPreview').onclick=applyBackgroundPreview;$('appFont').onchange=e=>{data.font=e.target.value;save();applyTheme()};$('defaultFontColor').oninput=e=>{data.defaultFontColor=e.target.value;save();render()};$('saveProfile').onclick=()=>{data.profile.name=$('profileName').value.trim()||'Planora User';data.profile.email=$('profileEmail').value.trim();save();renderProfile();alert('Profile saved.')};$('upgradeBtn').onclick=()=>{data.profile.plan='premium';save();renderProfile();alert('Premium demo unlocked.')};
+
+const PLANORA_GCAL_SETTINGS_KEY='planora_google_calendar_settings_v1';
+let planoraGcalToken=null;
+let planoraGcalTokenExpiresAt=0;
+let planoraGcalTokenClient=null;
+let planoraGcalAutoTimer=null;
+let planoraGcalSyncBusy=false;
+
+function gcalSettings(){
+  try{
+    return {...{clientId:'',autoSync:false},...JSON.parse(localStorage.getItem(PLANORA_GCAL_SETTINGS_KEY)||'{}')};
+  }catch(e){return {clientId:'',autoSync:false}}
+}
+function saveGcalSettings(v){
+  localStorage.setItem(PLANORA_GCAL_SETTINGS_KEY,JSON.stringify(v));
+}
+function setGcalStatus(title,detail='',mode=''){
+  const el=$('googleCalendarStatus');if(!el)return;
+  el.className='gcal-status'+(mode?' '+mode:'');
+  el.innerHTML=`<span class="gcal-dot"></span><div><b>${esc(title)}</b><div class="subtitle">${esc(detail)}</div></div>`;
+}
+function renderGcalSetup(){
+  const s=gcalSettings();
+  $('googleCalendarClientId').value=s.clientId||'';
+  $('googleCalendarAutoSync').checked=!!s.autoSync;
+  const connected=!!planoraGcalToken && Date.now()<planoraGcalTokenExpiresAt;
+  $('syncGoogleCalendar').disabled=!connected;
+  $('disconnectGoogleCalendar').disabled=!connected;
+  if(connected)setGcalStatus('Google Calendar connected','Two-way sync is ready.','connected');
+}
+function loadGoogleIdentityServices(){
+  return new Promise((resolve,reject)=>{
+    if(window.google?.accounts?.oauth2)return resolve();
+    const existing=document.querySelector('script[data-planora-gis]');
+    if(existing){
+      existing.addEventListener('load',resolve,{once:true});
+      existing.addEventListener('error',()=>reject(new Error('Google Identity Services failed to load.')),{once:true});
+      return;
+    }
+    const s=document.createElement('script');
+    s.src='https://accounts.google.com/gsi/client';
+    s.async=true;s.defer=true;s.dataset.planoraGis='1';
+    s.onload=resolve;
+    s.onerror=()=>reject(new Error('Google Identity Services failed to load.'));
+    document.head.appendChild(s);
+  });
+}
+function gcalAuthHeader(){
+  if(!planoraGcalToken || Date.now()>=planoraGcalTokenExpiresAt)throw new Error('Google Calendar authorization expired. Please Connect Google Calendar again.');
+  return {'Authorization':'Bearer '+planoraGcalToken,'Content-Type':'application/json'};
+}
+async function gcalFetch(path,options={}){
+  const res=await fetch('https://www.googleapis.com/calendar/v3'+path,{
+    ...options,
+    headers:{...gcalAuthHeader(),...(options.headers||{})}
+  });
+  if(res.status===204)return null;
+  const body=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(body?.error?.message||('Google Calendar request failed ('+res.status+')'));
+  return body;
+}
+async function connectGoogleCalendar(){
+  const s=gcalSettings();
+  const clientId=(s.clientId||'').trim();
+  if(!clientId)throw new Error('Enter your Google OAuth Web Client ID first.');
+  await loadGoogleIdentityServices();
+  return new Promise((resolve,reject)=>{
+    try{
+      planoraGcalTokenClient=google.accounts.oauth2.initTokenClient({
+        client_id:clientId,
+        scope:'https://www.googleapis.com/auth/calendar.events',
+        callback:(resp)=>{
+          if(resp?.error)return reject(new Error(resp.error_description||resp.error));
+          planoraGcalToken=resp.access_token;
+          planoraGcalTokenExpiresAt=Date.now()+(Number(resp.expires_in||3600)*1000)-60000;
+          renderGcalSetup();
+          setGcalStatus('Google Calendar connected','Authorization active. You can sync Planora-linked events now.','connected');
+          schedulePlanoraAutoSync();
+          resolve(resp);
+        }
+      });
+      planoraGcalTokenClient.requestAccessToken({prompt:'consent'});
+    }catch(err){reject(err)}
+  });
+}
+function disconnectGoogleCalendar(){
+  if(planoraGcalToken && window.google?.accounts?.oauth2){
+    try{google.accounts.oauth2.revoke(planoraGcalToken,()=>{})}catch(e){}
+  }
+  planoraGcalToken=null;planoraGcalTokenExpiresAt=0;planoraGcalTokenClient=null;
+  clearInterval(planoraGcalAutoTimer);planoraGcalAutoTimer=null;
+  renderGcalSetup();
+  setGcalStatus('Not connected','Connect again whenever you want to sync.','');
+}
+function planoraDateTimeForGoogle(item){
+  if(!item.time){
+    const start=item.date;
+    const d=new Date(item.date+'T12:00:00');d.setDate(d.getDate()+1);
+    return {start:{date:start},end:{date:iso(d)}};
+  }
+  const start=new Date(item.date+'T'+item.time+':00');
+  const mins=Number(item.durationMinutes||60);
+  const end=new Date(start.getTime()+mins*60000);
+  const offset=d=>{
+    const z=-d.getTimezoneOffset(),sg=z>=0?'+':'-',a=Math.abs(z);
+    return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'T'+pad2(d.getHours())+':'+pad2(d.getMinutes())+':00'+sg+pad2(Math.floor(a/60))+':'+pad2(a%60)
+  };
+  return {start:{dateTime:offset(start),timeZone:'Asia/Kuala_Lumpur'},end:{dateTime:offset(end),timeZone:'Asia/Kuala_Lumpur'}};
+}
+function planoraItemToGoogleResource(item){
+  const when=planoraDateTimeForGoogle(item);
+  return {
+    summary:plannerItemTitle(item),
+    description:'Synced from Planora Life Planner',
+    start:when.start,end:when.end,
+    extendedProperties:{private:{planoraSource:'planora',planoraId:item.id}}
+  };
+}
+function applyGoogleEventToPlanora(item,event){
+  const start=event.start||{};
+  if(start.date){
+    item.date=start.date;item.time='';
+  }else if(start.dateTime){
+    const d=new Date(start.dateTime);
+    item.date=iso(d);item.time=pad2(d.getHours())+':'+pad2(d.getMinutes());
+  }
+  if(item.type!=='photo'&&item.type!=='sticker')item.text=event.summary||item.text||'Google Calendar Event';
+  if(event.start?.dateTime && event.end?.dateTime){
+    const mins=Math.max(1,Math.round((new Date(event.end.dateTime)-new Date(event.start.dateTime))/60000));
+    item.durationMinutes=mins;
+  }
+  item.googleEventId=event.id;
+  item.googleUpdated=Date.parse(event.updated||0)||Date.now();
+  item.calendarSyncedAt=Date.now();
+  item.calendarSource=item.calendarSource||'planora';
+}
+async function createGoogleEventForItem(item){
+  const ev=await gcalFetch('/calendars/primary/events',{method:'POST',body:JSON.stringify(planoraItemToGoogleResource(item))});
+  item.googleEventId=ev.id;
+  item.googleUpdated=Date.parse(ev.updated||0)||Date.now();
+  item.calendarSyncedAt=Date.now();
+  return ev;
+}
+async function updateGoogleEventForItem(item,eventId){
+  const ev=await gcalFetch('/calendars/primary/events/'+encodeURIComponent(eventId),{method:'PUT',body:JSON.stringify(planoraItemToGoogleResource(item))});
+  item.googleEventId=ev.id;
+  item.googleUpdated=Date.parse(ev.updated||0)||Date.now();
+  item.calendarSyncedAt=Date.now();
+  return ev;
+}
+async function deleteGoogleEvent(eventId){
+  if(!eventId)return;
+  try{
+    await gcalFetch('/calendars/primary/events/'+encodeURIComponent(eventId),{method:'DELETE'});
+  }catch(err){
+    if(!/410|404|not found/i.test(String(err.message)))throw err;
+  }
+}
+window.planoraGoogleDeleteEvent=async(eventId)=>{
+  if(!planoraGcalToken || Date.now()>=planoraGcalTokenExpiresAt)throw new Error('Google Calendar is not connected.');
+  await deleteGoogleEvent(eventId);
+};
+async function listPlanoraLinkedGoogleEvents(){
+  const min=new Date();min.setFullYear(min.getFullYear()-2);
+  const max=new Date();max.setFullYear(max.getFullYear()+3);
+  const params=new URLSearchParams({
+    timeMin:min.toISOString(),timeMax:max.toISOString(),
+    singleEvents:'true',showDeleted:'true',maxResults:'2500',
+    privateExtendedProperty:'planoraSource=planora'
+  });
+  let all=[],pageToken='';
+  do{
+    if(pageToken)params.set('pageToken',pageToken);else params.delete('pageToken');
+    const r=await gcalFetch('/calendars/primary/events?'+params.toString(),{method:'GET'});
+    all=all.concat(r.items||[]);pageToken=r.nextPageToken||'';
+  }while(pageToken);
+  return all;
+}
+async function twoWaySyncGoogleCalendar(){
+  if(planoraGcalSyncBusy)return;
+  if(!planoraGcalToken || Date.now()>=planoraGcalTokenExpiresAt){
+    setGcalStatus('Authorization expired','Click Connect Google Calendar again to continue syncing.','error');
+    renderGcalSetup();return;
+  }
+  planoraGcalSyncBusy=true;
+  $('syncGoogleCalendar').disabled=true;
+  setGcalStatus('Syncing…','Checking Planora and Google Calendar changes.','syncing');
+  try{
+    data.googleCalendarDeleted=data.googleCalendarDeleted||[];
+    for(const eventId of [...data.googleCalendarDeleted]){
+      try{await deleteGoogleEvent(eventId)}catch(e){console.warn(e)}
+      data.googleCalendarDeleted=data.googleCalendarDeleted.filter(x=>x!==eventId);
+    }
+
+    const googleEvents=await listPlanoraLinkedGoogleEvents();
+    const byId=new Map(googleEvents.map(e=>[e.id,e]));
+    const byPlanoraId=new Map();
+    googleEvents.forEach(e=>{
+      const pid=e.extendedProperties?.private?.planoraId;
+      if(pid)byPlanoraId.set(pid,e);
+    });
+
+    let created=0,updatedGoogle=0,updatedPlanora=0,removed=0;
+
+    for(const item of [...(data.planner||[])].filter(x=>x.date)){
+      let ev=(item.googleEventId&&byId.get(item.googleEventId))||byPlanoraId.get(item.id);
+
+      if(ev?.status==='cancelled'){
+        data.planner=data.planner.filter(x=>x.id!==item.id);
+        removed++;continue;
+      }
+
+      if(!ev){
+        await createGoogleEventForItem(item);
+        created++;continue;
+      }
+
+      item.googleEventId=ev.id;
+      const googleUpdated=Date.parse(ev.updated||0)||0;
+      const previousGoogleUpdated=Number(item.googleUpdated||0);
+      const lastSync=Number(item.calendarSyncedAt||0);
+      const localModified=Number(item.planoraModified||0);
+
+      const localChanged=localModified>lastSync;
+      const googleChanged=googleUpdated>previousGoogleUpdated+1000;
+
+      if(localChanged && googleChanged){
+        if(localModified>=googleUpdated){
+          await updateGoogleEventForItem(item,ev.id);
+          updatedGoogle++;
+        }else{
+          applyGoogleEventToPlanora(item,ev);
+          updatedPlanora++;
+        }
+      }else if(localChanged){
+        await updateGoogleEventForItem(item,ev.id);
+        updatedGoogle++;
+      }else if(googleChanged){
+        applyGoogleEventToPlanora(item,ev);
+        updatedPlanora++;
+      }else{
+        item.googleUpdated=googleUpdated||item.googleUpdated||0;
+        item.calendarSyncedAt=Date.now();
+      }
+    }
+
+    // A linked Google event that has no local Planora item is imported back only
+    // if it explicitly contains a Planora ID. This recovers Planora-linked items
+    // without importing unrelated personal calendar events.
+    for(const ev of googleEvents){
+      if(ev.status==='cancelled')continue;
+      const pid=ev.extendedProperties?.private?.planoraId;
+      if(!pid)continue;
+      if((data.planner||[]).some(x=>x.id===pid||x.googleEventId===ev.id))continue;
+      const item={
+        id:pid,date:'',time:'',type:'note',text:ev.summary||'Google Calendar Event',
+        color:'#d8b6ae',bgColor:'#fff8f2',fontColor:data.defaultFontColor,font:'inherit',
+        done:false,googleEventId:ev.id,googleUpdated:Date.parse(ev.updated||0)||Date.now(),
+        calendarSyncedAt:Date.now(),calendarSource:'google',planoraModified:0
+      };
+      applyGoogleEventToPlanora(item,ev);
+      data.planner.push(item);updatedPlanora++;
+    }
+
+    save();render();
+    setGcalStatus('Sync complete ✓',`${created} created · ${updatedGoogle} sent to Google · ${updatedPlanora} received from Google · ${removed} removed`,'connected');
+  }catch(err){
+    console.error(err);
+    setGcalStatus('Sync error',err.message||String(err),'error');
+  }finally{
+    planoraGcalSyncBusy=false;
+    renderGcalSetup();
+  }
+}
+function schedulePlanoraAutoSync(){
+  clearInterval(planoraGcalAutoTimer);planoraGcalAutoTimer=null;
+  const s=gcalSettings();
+  if(s.autoSync && planoraGcalToken && Date.now()<planoraGcalTokenExpiresAt){
+    planoraGcalAutoTimer=setInterval(twoWaySyncGoogleCalendar,5*60*1000);
+  }
+}
+
+$('saveGoogleCalendarSetup').onclick=()=>{
+  const s=gcalSettings();
+  s.clientId=$('googleCalendarClientId').value.trim();
+  s.autoSync=$('googleCalendarAutoSync').checked;
+  saveGcalSettings(s);schedulePlanoraAutoSync();
+  setGcalStatus('Setup saved','Connect Google Calendar to authorize two-way sync.','');
+};
+$('googleCalendarAutoSync').onchange=e=>{
+  const s=gcalSettings();s.autoSync=e.target.checked;saveGcalSettings(s);schedulePlanoraAutoSync();
+};
+$('connectGoogleCalendar').onclick=async()=>{
+  try{
+    const s=gcalSettings();
+    s.clientId=$('googleCalendarClientId').value.trim();
+    s.autoSync=$('googleCalendarAutoSync').checked;
+    saveGcalSettings(s);
+    setGcalStatus('Connecting…','Google will ask you to choose an account and allow Calendar access.','syncing');
+    await connectGoogleCalendar();
+    await twoWaySyncGoogleCalendar();
+  }catch(err){setGcalStatus('Connection failed',err.message||String(err),'error')}
+};
+$('syncGoogleCalendar').onclick=twoWaySyncGoogleCalendar;
+$('disconnectGoogleCalendar').onclick=disconnectGoogleCalendar;
+renderGcalSetup();
+
 $('exportPlanoraICS').onclick=exportAllPlanoraICS;
 $('openGoogleCalendar').onclick=()=>{
   const today=iso(new Date());
@@ -1499,6 +1856,26 @@ INITIAL ADMIN SETUP
     active: true
 -->
 
+
+
+<!--
+GOOGLE CALENDAR TWO-WAY SYNC SETUP
+
+1. Google Cloud Console -> select/create the project used for Planora.
+2. APIs & Services -> Library -> enable "Google Calendar API".
+3. Google Auth Platform -> configure Branding / Audience if required.
+4. Google Auth Platform -> Clients -> Create Client -> Web application.
+5. Under Authorized JavaScript origins add your Planora origin, for example:
+      https://dayyanirene.github.io
+   Do NOT add a path after the domain.
+6. Copy the OAuth Web Client ID (ends in .apps.googleusercontent.com).
+7. In Planora -> Settings -> Calendar Connection, paste it into
+   "Google OAuth Web Client ID" and press Save Setup.
+8. Each Planora user presses "Connect Google Calendar" and grants permission.
+
+No Google OAuth client secret is required or safe inside this single HTML file.
+The browser receives a short-lived OAuth access token only after the user grants permission.
+-->
 
 </body>
 </html>
