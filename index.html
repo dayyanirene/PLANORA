@@ -298,6 +298,22 @@ body::before{
 }
 </style>
 
+
+<style>
+.calendar-actions{
+  display:flex;gap:6px;flex-wrap:wrap;margin-top:8px
+}
+.calendar-actions button{
+  font-size:11px;padding:5px 8px!important
+}
+.calendar-actions .google-cal-btn{
+  background:color-mix(in srgb,var(--accent) 15%,var(--surface))!important
+}
+.calendar-actions .apple-cal-btn{
+  background:color-mix(in srgb,var(--surface2) 90%,white 10%)!important
+}
+</style>
+
 </head>
 <body>
 
@@ -364,7 +380,12 @@ body::before{
     <button class="active" data-view="dashboard">Dashboard</button><button data-view="daily">Daily</button><button data-view="weekly">Weekly</button><button data-view="monthly">Monthly</button><button data-view="yearly">Yearly</button><button data-view="budget">Budget</button><button data-view="habits">Habits</button><button data-view="stickers">Stickers</button><button data-view="premium">Premium</button><button data-view="settings">Settings</button><button data-view="admin" class="admin-nav-button hidden" id="adminNavButton">Admin Access</button>
   </div>
   <div class="side-title">Account</div>
-  <div class="side-card"><b id="sideName">Planora User</b><div class="subtitle" id="sideEmail">demo@planora.app</div><div style="margin-top:8px"><span class="plan-badge" id="planBadge">FREE</span></div></div>
+  <div class="side-card">
+  <b id="sideName">Planora User</b>
+  <div class="subtitle" id="sideEmail">demo@planora.app</div>
+  <div style="margin-top:8px"><span class="plan-badge" id="planBadge">FREE</span></div>
+  <button class="btn danger" id="sideSignOut" style="width:100%;margin-top:12px">Sign Out</button>
+</div>
 </aside>
 <main class="main">
   <div class="topbar"><div class="title"><h1 id="pageTitle">Dashboard</h1><div class="subtitle" id="dateLabel"></div></div><div class="actions"><button class="btn" id="prevBtn">←</button><button class="btn" id="todayBtn">Today</button><button class="btn" id="nextBtn">→</button><button class="btn primary" id="globalAdd">＋ Add</button></div></div>
@@ -456,6 +477,39 @@ body::before{
   in Firebase Authentication → Settings → Authorized domains. Enable Email/Password and Google providers.
 </div>
 </div>
+
+<div class="panel" id="calendarSyncPanel" style="margin-top:16px">
+  <div class="section-title">
+    <div>
+      <h2>Calendar Connection</h2>
+      <div class="subtitle">Send Planora planner entries to Google Calendar or Apple / iOS Calendar.</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">Google Calendar</h3>
+      <div class="subtitle">Open Google Calendar with a Planora event already filled in. You can review it before saving.</div>
+      <div style="margin-top:12px">
+        <button class="btn primary" id="openGoogleCalendar">Open Google Calendar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Apple / iOS Calendar</h3>
+      <div class="subtitle">Export all Planora dated items as an .ics calendar file. Open the file on iPhone, iPad or Mac to add the events.</div>
+      <div style="margin-top:12px">
+        <button class="btn primary" id="exportPlanoraICS">Export Planora Calendar (.ics)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cloud-help" style="margin-top:12px">
+    <b>Important:</b> this version supports one-way add/export from Planora to Google Calendar and Apple Calendar.
+    True automatic two-way synchronization requires Google Calendar OAuth/API permissions and a separate secure integration.
+  </div>
+</div>
+
 <div class="planora-install-card">
   <div class="section-title"><h3>Install on iPhone / iPad</h3></div>
   <div class="subtitle">
@@ -587,7 +641,125 @@ function syncPlannerType(){const t=$('pType').value,isSticker=t==='sticker',isPh
 function openPlannerModal(item=null){editingPlannerId=item?.id||null;$('plannerModalTitle').textContent=item?'Edit Planner Item':'Add Planner Item';$('savePlanner').textContent=item?'Update Item':'Save Item';$('pDate').value=item?.date||iso(cursor);$('pTime').value=item?.time||'';$('pType').value=item?.type||'task';$('pText').value=item?.text||'';$('pColor').value=item?.color||'#d8b6ae';$('pBgColor').value=item?.bgColor||'#fff8f2';$('pFontColor').value=item?.fontColor||data.defaultFontColor;$('pFont').value=item?.font||'inherit';$('pPhoto').value='';$('photoHint').textContent=item?.type==='photo'&&item?.photo?'Current photo will remain unless you upload a replacement.':'';let selected='';if(item?.type==='sticker'){if(item.stickerRef)selected=item.stickerRef}renderStickerSelect(selected);syncPlannerType();openModal('plannerModal')}window.openPlannerModal=openPlannerModal;
 function emojiData(emoji){const c=document.createElement('canvas');c.width=c.height=180;const z=c.getContext('2d');z.font='120px serif';z.textAlign='center';z.textBaseline='middle';z.fillText(emoji,90,95);return c.toDataURL('image/png')}
 $('savePlanner').onclick=()=>{const t=$('pType').value,date=$('pDate').value||iso(cursor),existing=data.planner.find(x=>x.id===editingPlannerId);const finish=(media,mediaRef)=>{const obj={id:existing?.id||uid(),date,time:$('pTime').value||'',type:t,text:(t==='task'||t==='note'||t==='quote')?$('pText').value.trim():'',color:$('pColor').value,bgColor:$('pBgColor').value,fontColor:$('pFontColor').value,font:$('pFont').value,done:existing?.done||false};if(t==='sticker'){obj.sticker=media;obj.stickerRef=mediaRef}if(t==='photo')obj.photo=media;if((t==='task'||t==='note'||t==='quote')&&!obj.text)return alert('Please enter text.');if(existing)Object.assign(existing,obj);else data.planner.push(obj);save();$('plannerModal').classList.remove('show');editingPlannerId=null;render()};if(t==='photo'){const f=$('pPhoto').files[0];if(f){const r=new FileReader();r.onload=()=>finish(r.result,'');r.readAsDataURL(f)}else if(existing?.photo)finish(existing.photo,'');else alert('Please choose a photo.');return}if(t==='sticker'){const v=$('pSticker').value;if(v.startsWith('emoji:'))finish(emojiData(v.slice(6)),v);else{const st=data.stickers[Number(v.split(':')[1])];if(st)finish(st.src,v);else alert('Please choose a sticker.')}return}finish('','')};
+
+function pad2(n){return String(n).padStart(2,'0')}
+function planoraEventTimes(item){
+  const base=item.date||iso(new Date());
+  const time=item.time||'09:00';
+  const start=new Date(base+'T'+time+':00');
+  const end=new Date(start.getTime()+60*60*1000);
+  return {start,end};
+}
+function compactLocalDate(d){
+  return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+'T'+pad2(d.getHours())+pad2(d.getMinutes())+'00';
+}
+function icsEscape(v){
+  return String(v??'')
+    .replace(/\\/g,'\\\\')
+    .replace(/\n/g,'\\n')
+    .replace(/,/g,'\\,')
+    .replace(/;/g,'\\;');
+}
+function plannerItemTitle(item){
+  if(item.type==='photo') return 'Planora Photo';
+  if(item.type==='sticker') return 'Planora Sticker';
+  return item.text||'Planora Planner Item';
+}
+function googleCalendarUrl(item){
+  const {start,end}=planoraEventTimes(item);
+  const title=plannerItemTitle(item);
+  const details='Added from Planora Life Planner'+(item.type?'\nType: '+item.type:'');
+  const qs=new URLSearchParams({
+    action:'TEMPLATE',
+    text:title,
+    dates:compactLocalDate(start)+'/'+compactLocalDate(end),
+    details,
+    ctz:'Asia/Kuala_Lumpur'
+  });
+  return 'https://calendar.google.com/calendar/render?'+qs.toString();
+}
+function openItemInGoogleCalendar(item){
+  window.open(googleCalendarUrl(item),'_blank','noopener');
+}
+function itemToICS(item){
+  const {start,end}=planoraEventTimes(item);
+  const uid=(item.id||uid())+'@planora';
+  const now=new Date();
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Planora Life Planner//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:'+icsEscape(uid),
+    'DTSTAMP:'+compactLocalDate(now),
+    'DTSTART;TZID=Asia/Kuala_Lumpur:'+compactLocalDate(start),
+    'DTEND;TZID=Asia/Kuala_Lumpur:'+compactLocalDate(end),
+    'SUMMARY:'+icsEscape(plannerItemTitle(item)),
+    'DESCRIPTION:'+icsEscape('Added from Planora Life Planner'+(item.type?'\\nType: '+item.type:'')),
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+}
+function downloadTextFile(filename,text,type='text/plain;charset=utf-8'){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function downloadItemICS(item){
+  const safe=plannerItemTitle(item).replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-').slice(0,45)||'planora-event';
+  downloadTextFile(safe+'.ics',itemToICS(item),'text/calendar;charset=utf-8');
+}
+function exportAllPlanoraICS(){
+  const events=(data.planner||[])
+    .filter(x=>x.date)
+    .sort((a,b)=>((a.date||'')+(a.time||'')).localeCompare((b.date||'')+(b.time||'')));
+  if(!events.length){alert('No dated planner items to export yet.');return}
+  const now=new Date();
+  const lines=[
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Planora Life Planner//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+  ];
+  events.forEach(item=>{
+    const {start,end}=planoraEventTimes(item);
+    lines.push(
+      'BEGIN:VEVENT',
+      'UID:'+icsEscape((item.id||uid())+'@planora'),
+      'DTSTAMP:'+compactLocalDate(now),
+      'DTSTART;TZID=Asia/Kuala_Lumpur:'+compactLocalDate(start),
+      'DTEND;TZID=Asia/Kuala_Lumpur:'+compactLocalDate(end),
+      'SUMMARY:'+icsEscape(plannerItemTitle(item)),
+      'DESCRIPTION:'+icsEscape('Added from Planora Life Planner'+(item.type?'\\nType: '+item.type:'')),
+      'END:VEVENT'
+    );
+  });
+  lines.push('END:VCALENDAR');
+  downloadTextFile('planora-calendar.ics',lines.join('\r\n'),'text/calendar;charset=utf-8');
+}
+
 function plannerItem(i){const d=document.createElement('div');d.className='item '+i.type;d.style.setProperty('--itemColor',i.color||'#d8b6ae');d.style.setProperty('--itemBg',(i.type==='note'||i.type==='quote')?(i.bgColor||'#fff8f2'):'#fff');d.style.setProperty('--itemFont',i.fontColor||data.defaultFontColor);d.style.setProperty('--itemTypeface',i.font||'inherit');const acts=document.createElement('div');acts.className='item-actions';const edit=document.createElement('button');edit.textContent='Edit';edit.title='Edit item';edit.className='edit-item-btn';edit.onclick=(e)=>{e.stopPropagation();openPlannerModal(i)};const del=document.createElement('button');del.textContent='×';del.title='Delete';del.onclick=(e)=>{e.stopPropagation();if(confirm('Delete this planner item?')){data.planner=data.planner.filter(z=>z.id!==i.id);save();render()}};acts.append(edit,del);d.appendChild(acts);
+if(i.date){
+  const cal=document.createElement('div');
+  cal.className='calendar-actions';
+  const g=document.createElement('button');
+  g.className='google-cal-btn';
+  g.textContent='Google Calendar';
+  g.title='Add this Planora item to Google Calendar';
+  g.onclick=(e)=>{e.stopPropagation();openItemInGoogleCalendar(i)};
+  const a=document.createElement('button');
+  a.className='apple-cal-btn';
+  a.textContent='Apple / iOS';
+  a.title='Download this event as an .ics calendar file';
+  a.onclick=(e)=>{e.stopPropagation();downloadItemICS(i)};
+  cal.append(g,a);
+  d.appendChild(cal);
+}
 if(i.time){
   const tm=document.createElement('div');
   tm.className='item-time';
@@ -829,7 +1001,16 @@ $('customBackgroundUpload').onchange=async e=>{
   }
 };
 $('cancelBackgroundPreview').onclick=cancelBackgroundPreview;
-$('applyBackgroundPreview').onclick=applyBackgroundPreview;$('appFont').onchange=e=>{data.font=e.target.value;save();applyTheme()};$('defaultFontColor').oninput=e=>{data.defaultFontColor=e.target.value;save();render()};$('saveProfile').onclick=()=>{data.profile.name=$('profileName').value.trim()||'Planora User';data.profile.email=$('profileEmail').value.trim();save();renderProfile();alert('Profile saved.')};$('upgradeBtn').onclick=()=>{data.profile.plan='premium';save();renderProfile();alert('Premium demo unlocked.')};function renderProfile(){$('sideName').textContent=data.profile.name;$('sideEmail').textContent=data.profile.email;$('planBadge').textContent=data.profile.plan.toUpperCase();$('profileName').value=data.profile.name;$('profileEmail').value=data.profile.email;$('appFont').value=data.font;$('defaultFontColor').value=data.defaultFontColor}
+$('applyBackgroundPreview').onclick=applyBackgroundPreview;$('appFont').onchange=e=>{data.font=e.target.value;save();applyTheme()};$('defaultFontColor').oninput=e=>{data.defaultFontColor=e.target.value;save();render()};$('saveProfile').onclick=()=>{data.profile.name=$('profileName').value.trim()||'Planora User';data.profile.email=$('profileEmail').value.trim();save();renderProfile();alert('Profile saved.')};$('upgradeBtn').onclick=()=>{data.profile.plan='premium';save();renderProfile();alert('Premium demo unlocked.')};
+$('exportPlanoraICS').onclick=exportAllPlanoraICS;
+$('openGoogleCalendar').onclick=()=>{
+  const today=iso(new Date());
+  const first=(data.planner||[]).find(x=>x.date===today)||(data.planner||[]).find(x=>x.date);
+  if(first) openItemInGoogleCalendar(first);
+  else window.open('https://calendar.google.com/calendar/u/0/r','_blank','noopener');
+};
+
+function renderProfile(){$('sideName').textContent=data.profile.name;$('sideEmail').textContent=data.profile.email;$('planBadge').textContent=data.profile.plan.toUpperCase();$('profileName').value=data.profile.name;$('profileEmail').value=data.profile.email;$('appFont').value=data.font;$('defaultFontColor').value=data.defaultFontColor}
 function renderDashboard(){const today=iso(new Date()),tasks=data.planner.filter(x=>x.date===today&&x.type==='task'&&!x.done).length;$('dashTasks').textContent=tasks;const now=new Date(),rows=data.money.filter(x=>{const d=new Date(x.date+'T12:00:00');return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()}),inf=rows.filter(x=>x.type==='inflow').reduce((s,x)=>s+Number(x.amount||0),0),out=rows.filter(x=>x.type==='outflow').reduce((s,x)=>s+Number(x.amount||0),0),al=rows.filter(x=>x.type==='allocation').reduce((s,x)=>s+Number(x.amount||0),0),left=inf-out-al;$('dashInflow').textContent=money(inf);$('dashOutflow').textContent=money(out);$('dashAlloc').textContent=money(al);$('dashLeft').textContent=money(left);const box=$('dashToday');box.innerHTML='';const arr=data.planner.filter(x=>x.date===today).slice(0,5);if(!arr.length)box.innerHTML='<div class="empty">Nothing planned today.</div>';arr.forEach(x=>box.appendChild(plannerItem(x)));renderAccounts('dashAccounts')}
 $('exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='planora-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)};$('importFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=merge(JSON.parse(r.result));save();applyTheme();render();alert('Backup imported.')}catch(err){alert('Invalid backup file.')}};r.readAsText(f)};$('clearBtn').onclick=()=>{if(confirm('Clear all Planora data on this device?')){localStorage.removeItem(KEY);location.reload()}};
 function render(){applyTheme();renderProfile();$('dateLabel').textContent=active==='budget'?periodLabel(budgetPeriod):(active==='yearly'?String(cursor.getFullYear()):cursor.toLocaleDateString('en-MY',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));if(active==='dashboard')renderDashboard();if(active==='daily')renderDaily();if(active==='weekly')renderWeek();if(active==='monthly')renderMonth();if(active==='yearly')renderYear();if(active==='budget')renderBudget();if(active==='habits')renderHabits();if(active==='stickers')renderStickers();if(active==='settings')renderThemeGrid()}
@@ -860,6 +1041,8 @@ const gateEl=document.getElementById('accessGate');
 const cloudStatus=document.getElementById('cloudStatus');
 const cloudBadge=document.getElementById('cloudModeBadge');
 const adminNav=document.getElementById('adminNavButton');
+const sideSignOut=document.getElementById('sideSignOut');
+const settingsSignOut=document.getElementById('cloudSignOut');
 
 const setGateMessage=(id,msg,type='')=>{
   const el=document.getElementById(id); if(!el)return;
@@ -981,6 +1164,8 @@ try{
 
     await loadCloudData(user);
     setCloud('Signed in as '+(user.email||'Planora user')+' ✓',isAdminUser?'ADMIN':'CLOUD SYNC');
+    settingsSignOut?.classList.remove('hidden');
+    if(sideSignOut) sideSignOut.style.display='';
     unlockApp();
     if(isAdminUser){
       refreshAdminRequests();
@@ -1087,7 +1272,20 @@ try{
   };
 
   // Existing Settings sign-out button remains useful inside the app.
-  document.getElementById('cloudSignOut').onclick=async()=>{await authMod.signOut(auth);lockApp();showGateTab('signin')};
+  async function planoraSecureSignOut(){
+    try{
+      await authMod.signOut(auth);
+    }finally{
+      currentUser=null;isAdminUser=false;isApprovedUser=false;
+      adminNav?.classList.add('hidden');
+      settingsSignOut?.classList.add('hidden');
+      lockApp();
+      showGateTab('signin');
+      setGateMessage('gateSignInMessage','You have signed out successfully.','success');
+    }
+  }
+  if(settingsSignOut) settingsSignOut.onclick=planoraSecureSignOut;
+  if(sideSignOut) sideSignOut.onclick=planoraSecureSignOut;
   // Hide Settings-level registration controls; account creation happens only at secure gate.
   document.getElementById('cloudSignUp')?.classList.add('hidden');
   document.getElementById('cloudSignIn')?.classList.add('hidden');
@@ -1174,7 +1372,7 @@ try{
 
   // Keep Auth state secure across refreshes.
   authMod.onAuthStateChanged(auth,async user=>{
-    if(!user){currentUser=null;isAdminUser=false;isApprovedUser=false;adminNav?.classList.add('hidden');lockApp();return}
+    if(!user){currentUser=null;isAdminUser=false;isApprovedUser=false;adminNav?.classList.add('hidden');settingsSignOut?.classList.add('hidden');lockApp();return}
     try{await finishApprovedLogin(user)}catch(err){console.error(err);lockApp();}
   });
 
